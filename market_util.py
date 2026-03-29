@@ -49,7 +49,7 @@ def fetch_prover_epochs(prover_address: str) -> dict[int, dict]:
     data = curl_get(url)
     epochs = {}
     for entry in data:
-        epoch = entry["epoch"]
+        epoch = entry["epoch_number_start"]
         epochs[epoch] = entry
     log(f"Fetched {len(epochs)} prover epochs for {prover_address}")
     return epochs
@@ -57,10 +57,10 @@ def fetch_prover_epochs(prover_address: str) -> dict[int, dict]:
 
 def fetch_miner_epochs(miner_address: str) -> dict[int, dict]:
     """Fetch per-epoch PoVW mining aggregates for a miner address."""
-    url = f"{BASE_URL}/miners/{miner_address}/aggregates/epoch"
+    url = f"{BASE_URL}/miners/{miner_address}"
     data = curl_get(url)
     epochs = {}
-    for entry in data:
+    for entry in data["entries"]:
         epoch = entry["epoch"]
         epochs[epoch] = entry
     log(f"Fetched {len(epochs)} miner epochs for {miner_address}")
@@ -84,8 +84,8 @@ def compute_utilization(
         prover_data = prover_epochs.get(epoch)
         miner_data = miner_epochs.get(epoch)
 
-        market_cycles = prover_data["total_cycles"] if prover_data else None
-        povw_cycles = miner_data["work_submitted"] if miner_data else None
+        market_cycles = int(prover_data["total_cycles"]) if prover_data else None
+        povw_cycles = int(miner_data["work_submitted"]) if miner_data else None
 
         if market_cycles is not None and povw_cycles is not None and povw_cycles > 0:
             pct = (market_cycles / povw_cycles) * 100
@@ -104,15 +104,13 @@ def compute_utilization(
 
 
 def format_cycles(n: int | None) -> str:
-    """Format cycle counts with K/M/G suffixes for readability."""
+    """Format cycle counts for readability."""
     if n is None:
         return "N/A"
     if n >= 1_000_000_000:
-        return f"{n / 1_000_000_000:.2f}G"
+        return f"{n / 1_000_000_000:.2f}T"
     if n >= 1_000_000:
         return f"{n / 1_000_000:.2f}M"
-    if n >= 1_000:
-        return f"{n / 1_000:.2f}K"
     return str(n)
 
 
